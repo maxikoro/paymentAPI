@@ -42,6 +42,7 @@ git clone https://github.com/maxikoro/paymentAPI.git
 cd paymentAPI
 docker compose up -d
 ```
+Первый раз билд может длиться довольно долго. Не пугайтесь. Веб интерфейс на основе Next.js особенно долго собирается.
 
 ### Если есть проблема с билдом питон контейнеров на внешнем хостинге, то вот решение:
 The reason for this is issue is an MTU mismatch of your network interfaces. If you open the base image from your Dockerfile in interactive mode: sudo docker run -it {your base image repo} /bin/bash, and run ip a, then do the same on your host OS, you will probably find that they are different. This means that the Docker bridge is dropping packets / failing transmission. If you want bridge networking to work as opposed to host, create a file on your host OS at /etc/docker/daemon.json with the contents
