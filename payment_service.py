@@ -3,29 +3,35 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 import random
 from model import Payment, PaymentState
 from datetime import datetime
+import os
+import logging
+
+KAFKA_URL = os.getenv("KAFKA_URL", 'localhost:9094')
+
+logging.basicConfig(level=logging.INFO)
 
 async def consume_and_produce():
     consumer = AIOKafkaConsumer(
         'payments',
-        bootstrap_servers='localhost:9094',
+        bootstrap_servers=KAFKA_URL,
         group_id='paymentsGroup'
     )
     producer = AIOKafkaProducer(
-        bootstrap_servers='localhost:9094'
+        bootstrap_servers=KAFKA_URL
     )
 
     await consumer.start()
     await producer.start()
     try:
         async def handle_message(message):
-            print("consumed: ", message.value)
+            logging.info("consumed: %s", message.value)
             payment = Payment.model_validate_json(message.value)
 
             ### здесь имитируется вызов внешнего АПИ для обработки платежа, 
             # которая занимает случайное время от 3 до 25 секунд и 
-            # возвращает случайный статус с вероятностью 90% успешно и 10% неуспешно
+            # возвращает случайный статус с вероятностью 80% успешно и 20% неуспешно
             delay = random.randint(3, 25)
-            if random.random() < 0.9:
+            if random.random() < 0.8:
                 payment.state = PaymentState.COMPLETED
                 payment.extPaymentDetails = f"Payment processed in {delay} seconds"
             else:
@@ -35,7 +41,7 @@ async def consume_and_produce():
             payment.processed = datetime.now().isoformat()
 
             await producer.send_and_wait('paymentsResults', payment.model_dump_json().encode('utf-8'))
-            print(f"produced: {payment}")
+            logging.info("produced: %s", payment)
 
         tasks = []
         async for message in consumer:

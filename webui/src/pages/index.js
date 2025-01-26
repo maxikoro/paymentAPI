@@ -14,6 +14,7 @@ export default function Home() {
   const [paymentPurpose, setPaymentPurpose] = React.useState("");
   const [payments, setPayments] = React.useState([]);
   const [errors, setErrors] = React.useState([]);
+  const [isLoading, setIsLoading] = React.useState(false);
 
   React.useEffect(() => {
     const savedUuid = Cookies.get("uuid");
@@ -41,6 +42,7 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
+    setIsLoading(true);
     const response = await fetch("/payments", {
       method: "POST",
       headers: {
@@ -64,6 +66,7 @@ export default function Home() {
       console.error("Failed to create payment", errorData);
       setErrors([...errors, { id: uuidv4(), message: errorData.message || "Ошибка при создании платежа" }]);
     }
+    setIsLoading(false);
   };
 
   const pollPaymentStatus = async (paymentId) => {
@@ -130,7 +133,10 @@ export default function Home() {
             />
           </label>
         </div>
-        <button className="btn btn-success mt-3" onClick={handleSubmit}>
+        <button className="btn btn-success mt-3" onClick={handleSubmit} disabled={isLoading}>
+          {isLoading ? (
+            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          ) : null}
           Отправить платеж
         </button>
         <div className="mt-5">

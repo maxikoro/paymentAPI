@@ -1,31 +1,55 @@
 services:
-  # consumer1:
-  #   build:
-  #     context: ./consumer
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - kafka-init
+  payment-service:
+    container_name: payment-service
+    build:
+      context: .  # Укажите корневую директорию проекта
+      dockerfile: ./payment-service/Dockerfile  # Укажите путь к Dockerfile относительно корневой директории
+    # ports:
+    #   - 8011:8000
+    environment:
+      # - DATABASE_URL=postgresql://paymentuser:s3cure@db:5432/paymentdb
+      - KAFKA_URL=kafka
+    depends_on:
+      - kafka-init
+      - db
 
-  # consumer2:
-  #   build:
-  #     context: ./consumer
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - kafka-init
+  updater-service:
+    container_name: updater-sevice
+    build:
+      context: .  # Укажите корневую директорию проекта
+      dockerfile: ./updater-service/Dockerfile  # Укажите путь к Dockerfile относительно корневой директории
+    ports:
+      - 8011:8000
+    environment:
+      - DATABASE_URL=postgresql://paymentuser:s3cure@db:5432/paymentdb
+      - KAFKA_URL=kafka
+    depends_on:
+      - kafka-init
+      - db
 
-  # consumer3:
-  #   build:
-  #     context: ./consumer
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - kafka-init
+  main-api:
+    container_name: main-api
+    build:
+      context: .  # Укажите корневую директорию проекта
+      dockerfile: ./mainAPI/Dockerfile  # Укажите путь к Dockerfile относительно корневой директории
+    ports:
+      - 8010:8000
+    environment:
+      - DATABASE_URL=postgresql://paymentuser:s3cure@db:5432/paymentdb
+      - KAFKA_URL=kafka
+    depends_on:
+      - kafka-init
+      - db
 
-  # producer:
-  #   build:
-  #     context: ./producer
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - kafka-init
+  nextjs-app:
+    build:
+      context: ./webui
+      dockerfile: Dockerfile
+    ports:
+      - '4000:3000'
+    # depends_on:
+    #   - kafka-init
+    #   - db
 
   kafka-init:
     build:
@@ -67,7 +91,7 @@ services:
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
     healthcheck:
       test: ["CMD", "kafka-topics.sh", "--version"] #"--bootstrap-server=localhost:9092", "--list"]
-      interval: 30s
+      interval: 40s
       timeout: 30s
       retries: 5
 
@@ -86,6 +110,7 @@ services:
 
   db:
     image: postgres
+    container_name: db
     ports:
       - "35432:5432"
     restart: always

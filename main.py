@@ -7,7 +7,11 @@ import asyncio
 import asyncpg
 from datetime import datetime
 from model import Payment
+import os
 
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://paymentuser:s3cure@localhost:35432/paymentdb")
+KAFKA_URL = os.getenv("KAFKA_URL", 'localhost:9094')
 
 # Глобальные переменные для пула подключений и продюсера
 db_pool = None
@@ -16,10 +20,10 @@ producer = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global db_pool, producer
-    db_pool = await asyncpg.create_pool(dsn="postgresql://paymentuser:s3cure@localhost:35432/paymentdb")
-    producer = AIOKafkaProducer(bootstrap_servers='localhost:9094')
+    db_pool = await asyncpg.create_pool(dsn=DATABASE_URL)
+    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_URL)
     await producer.start()
-    # consumer = AIOKafkaConsumer("paymentsResults", bootstrap_servers='localhost:9094', group_id="paymentsResultsGroup")
+    # consumer = AIOKafkaConsumer("paymentsResults", bootstrap_servers=KAFKA_URL, group_id="paymentsResultsGroup")
     # await consumer.start()
     # asyncio.create_task(consume(consumer))
     yield
@@ -51,7 +55,17 @@ async def get_payment(payment_id: str):
     async with db_pool.acquire() as connection:
         result = await connection.fetchrow("SELECT * FROM payment WHERE payment_id = $1", payment_id)
         if result:
-            return dict(result)
+            return {
+                    "paymentId": result["payment_id"],
+                    "userId": result["user_id"],
+                    "created": result["created"],
+                    "processed": result["processed"],
+                    "state": result["state"],
+                    "accountNumber": result["account_number"],
+                    "amount": result["amount"],
+                    "description": result["description"],
+                    "extPaymentDetails": result["ext_payment_details"]
+                }
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
 
 @app.get("/payments/lp/{payment_id}")
@@ -63,7 +77,17 @@ async def long_poll_payment(payment_id: str):
         async with db_pool.acquire() as connection:
             result = await connection.fetchrow("SELECT * FROM payment WHERE payment_id = $1", payment_id)
             if result:
-                payment = dict(result)
+                payment = {
+                    "paymentId": result["payment_id"],
+                    "userId": result["user_id"],
+                    "created": result["created"],
+                    "processed": result["processed"],
+                    "state": result["state"],
+                    "accountNumber": result["account_number"],
+                    "amount": result["amount"],
+                    "description": result["description"],
+                    "extPaymentDetails": result["ext_payment_details"]
+                }
                 if payment['state'] != 'pending':
                     return payment
             else:

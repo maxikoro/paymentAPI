@@ -5,42 +5,36 @@
 - [About](#about)
 - [Getting Started](#getting_started)
 - [Usage](#usage)
-- [Contributing](../CONTRIBUTING.md)
+- [To Do](#todo)
 
 ## About <a name = "about"></a>
 
-Write about 1-2 paragraphs describing the purpose of your project.
+Создает композитный контейнер
 
 ## Getting Started <a name = "getting_started"></a>
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See [deployment](#deployment) for notes on how to deploy the project on a live system.
-
 ### Prerequisites
 
-What things you need to install the software and how to install them.
-
-```
-Give examples
-```
+Вам нужен установленный докер и гит.
 
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running.
-
-Say what the step will be
-
 ```
-Give the example
+git clone https://github.com/maxikoro/paymentAPI.git
+cd paymentAPI
+docker compose up -d
 ```
-
-And repeat
-
-```
-until finished
-```
-
-End with an example of getting some data out of the system or using it for a little demo.
 
 ## Usage <a name = "usage"></a>
 
-Add notes about how to use the system.
+### Postman collection
+[<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://app.getpostman.com/run-collection/15342782-f1b44bdd-3c15-45a9-a259-0e164f49a6da?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D15342782-f1b44bdd-3c15-45a9-a259-0e164f49a6da%26entityType%3Dcollection%26workspaceId%3D68c07b05-7bae-4c01-9e65-523859c05585)
+
+### Архитектура
+<img src="./PaymentPetArchitecture.png">
+
+## To Do <a name = "todo"></a>
+- Рефакторинг инициализации кафки(сейчас иногда она не успевает стартануть, не успевают создаться топики и сервисы валятся. Правда их можно отдельно зарестартить и вопрос решен :)
+- Сделать кластер брокеров кафки(сейчас там один брокер, он же контроллер, без зуукипера) и поэксперементировать с отказами и последующей ребалансировкой
+- Дед леттер кью(для полной картины надо имитировать, что некоторые платежи сразу не обрабатываются и продумать логику для этого)
+- можно масштабировать микросервисы payment-service, updater-service.(просто накопировать их в докер-композе.ямл) Сейчас они по одному, можно увеличить до количества партиций в топиках(до 3)
