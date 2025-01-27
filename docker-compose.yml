@@ -6,6 +6,7 @@ services:
       dockerfile: ./payment-service/Dockerfile  # Укажите путь к Dockerfile относительно корневой директории
     # ports:
     #   - 8011:8000
+    restart: always
     environment:
       # - DATABASE_URL=postgresql://paymentuser:s3cure@db:5432/paymentdb
       - KAFKA_URL=kafka
@@ -20,6 +21,7 @@ services:
       dockerfile: ./updater-service/Dockerfile  # Укажите путь к Dockerfile относительно корневой директории
     ports:
       - 8011:8000
+    restart: always
     environment:
       - DATABASE_URL=postgresql://paymentuser:s3cure@db:5432/paymentdb
       - KAFKA_URL=kafka
@@ -34,6 +36,7 @@ services:
       dockerfile: ./mainAPI/Dockerfile  # Укажите путь к Dockerfile относительно корневой директории
     ports:
       - 8010:8000
+    restart: always
     environment:
       - DATABASE_URL=postgresql://paymentuser:s3cure@db:5432/paymentdb
       - KAFKA_URL=kafka
@@ -47,9 +50,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - '4000:3000'
-    # depends_on:
-    #   - kafka-init
-    #   - db
+    depends_on:
+      - kafka-init
+      - db
 
   kafka-init:
     build:
