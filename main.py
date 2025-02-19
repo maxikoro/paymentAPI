@@ -50,23 +50,29 @@ async def create_payment(payment: Payment):
     await producer.send_and_wait("payments", payment.model_dump_json().encode("utf-8"))
     return JSONResponse(status_code=status.HTTP_201_CREATED, content=payment.model_dump())
 
-@app.get("/payments/{payment_id}")
-async def get_payment(payment_id: str):
+async def fetch_payment(payment_id: str):
     async with db_pool.acquire() as connection:
         result = await connection.fetchrow("SELECT * FROM payment WHERE payment_id = $1", payment_id)
         if result:
             return {
-                    "paymentId": result["payment_id"],
-                    "userId": result["user_id"],
-                    "created": result["created"],
-                    "processed": result["processed"],
-                    "state": result["state"],
-                    "accountNumber": result["account_number"],
-                    "amount": result["amount"],
-                    "description": result["description"],
-                    "extPaymentDetails": result["ext_payment_details"]
-                }
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+                "paymentId": result["payment_id"],
+                "userId": result["user_id"],
+                "created": result["created"],
+                "processed": result["processed"],
+                "state": result["state"],
+                "accountNumber": result["account_number"],
+                "amount": result["amount"],
+                "description": result["description"],
+                "extPaymentDetails": result["ext_payment_details"]
+            }
+        return None
+
+@app.get("/payments/{payment_id}")
+async def get_payment(payment_id: str):
+    payment = await fetch_payment(payment_id)
+    if payment:
+        return payment
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
 
 @app.get("/payments/lp/{payment_id}")
 async def long_poll_payment(payment_id: str):
@@ -74,24 +80,12 @@ async def long_poll_payment(payment_id: str):
     start_time = datetime.now()
 
     while (datetime.now() - start_time).seconds < timeout:
-        async with db_pool.acquire() as connection:
-            result = await connection.fetchrow("SELECT * FROM payment WHERE payment_id = $1", payment_id)
-            if result:
-                payment = {
-                    "paymentId": result["payment_id"],
-                    "userId": result["user_id"],
-                    "created": result["created"],
-                    "processed": result["processed"],
-                    "state": result["state"],
-                    "accountNumber": result["account_number"],
-                    "amount": result["amount"],
-                    "description": result["description"],
-                    "extPaymentDetails": result["ext_payment_details"]
-                }
-                if payment['state'] != 'pending':
-                    return payment
-            else:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+        payment = await fetch_payment(payment_id)
+        if payment:
+            if payment['state'] != 'pending':
+                return payment
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
         await asyncio.sleep(1)  # wait for 1 second before next check
 
     raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Timeout: Payment status did not change from pending within 10 seconds")
